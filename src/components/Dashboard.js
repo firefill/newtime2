@@ -9,10 +9,7 @@ function Dashboard({ loggedIn, setLoggedIn }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loggedIn) {
-      setLoading(false);
-      return;
-    }
+    // Эффект выполнится один раз при монтировании компонента
     const fetchUserData = async () => {
       try {
         const res = await fetch('http://localhost:5002/api/me', {
@@ -23,7 +20,6 @@ function Dashboard({ loggedIn, setLoggedIn }) {
           const data = await res.json();
           setUserData(data);
         } else {
-          // Если сессия недействительна, снимаем флаг логина
           setLoggedIn(false);
         }
       } catch (error) {
@@ -33,8 +29,12 @@ function Dashboard({ loggedIn, setLoggedIn }) {
       }
     };
 
-    fetchUserData();
-  }, [loggedIn, setLoggedIn]);
+    if (loggedIn) {
+      fetchUserData();
+    } else {
+      setLoading(false);
+    }
+  }, []); // пустой массив зависимостей
 
   if (!loggedIn) {
     return <Navigate to="/login" />;
@@ -50,18 +50,20 @@ function Dashboard({ loggedIn, setLoggedIn }) {
       { userData ? (
         <div className="user-info">
           <p><strong>Никнейм:</strong> {userData.nickname}</p>
-          <p><strong>Гильдия:</strong> {userData.guild || 'Не состоит'}</p>
+          <p><strong>Город:</strong> {userData.guild || 'Не состоит'}</p>
           <p><strong>Время в игре:</strong> {userData.playTime} минут</p>
           <p>
             <strong>Скин:</strong>
-            {userData.skin
-              ? <img src={userData.skin} alt="Скин" width="64" />
-              : 'Не задан'}
+            {userData.skin ? (
+              <img src={userData.skin} alt="Скин" width="64" />
+            ) : (
+              'Не задан'
+            )}
           </p>
           <p><strong>АР (Деньги ваниль):</strong> {userData.ar}</p>
           <p><strong>Деньги ивентовые:</strong> {userData.eventMoney}</p>
           <p><strong>Деньги донатные:</strong> {userData.donateMoney}</p>
-          <p><strong>Игровая роль:</strong> {userData.gameRole || 'Не задана'}</p>
+          <p><strong>Роль:</strong> {userData.role || 'Не задана'}</p>
         </div>
       ) : (
         <p>Не удалось загрузить данные пользователя.</p>
@@ -73,7 +75,7 @@ function Dashboard({ loggedIn, setLoggedIn }) {
           <li><Link to="/worlds/survival">Выжидание</Link></li>
           <li><Link to="/worlds/creative">Креатив</Link></li>
           <li><Link to="/worlds/lobby">Лобби</Link></li>
-          <li><Link to="/guild">Гильдия</Link></li>
+          <li><Link to="/cities">Города</Link></li>
           <li><Link to="/donate">Донат</Link></li>
           <li><Link to="/support">Поддержка</Link></li>
           <li><Link to="/rules">Правила</Link></li>

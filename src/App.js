@@ -1,7 +1,4 @@
-
-
 // src/App.js
-
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -9,6 +6,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Header from './components/Header';
 import Login from './components/Login';
 import Registration from './components/Registration';
+import Dashboard from './components/Dashboard';
 import NorthernNews from './components/NorthernNews';
 import GamingNews from './components/GamingNews';
 import Events from './components/Events';
@@ -18,13 +16,33 @@ import Donate from './components/Donate';
 import Rules from './components/Rules';
 import Guild from './components/Guild';
 import Bank from './components/Bank';
-import Dashboard from './components/Dashboard';
+import EditSupport from './components/EditSupport';
+
+// Технические роли для доступа к техническим страницам
+const technicalRoles = ["Поддержка", "Администратор", "Создатель"];
+
+const hasTechnicalAccess = (userData) => {
+  if (!userData) return false;
+  // Если в базе хранится массив ролей (в поле roles)
+  if (userData.roles) {
+    try {
+      const rolesArray = JSON.parse(userData.roles);
+      return rolesArray.some(role => technicalRoles.includes(role));
+    } catch (err) {
+      console.error("Ошибка парсинга ролей:", err);
+      return false;
+    }
+  }
+  // Иначе проверяем старое поле role
+  return technicalRoles.includes(userData.role);
+};
 
 const App = () => {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [userData, setUserData] = useState(null);
 
-  // Проверка авторизации при загрузке приложения
+  // Проверка авторизации и получение данных пользователя
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -33,6 +51,9 @@ const App = () => {
           credentials: 'include'
         });
         if (res.ok) {
+          const data = await res.json();
+          console.log("Fetched userData:", data);
+          setUserData(data);
           setLoggedIn(true);
         } else {
           setLoggedIn(false);
@@ -55,9 +76,10 @@ const App = () => {
     <Router>
       {loggedIn ? (
         <>
-          {/* Хедер с группировкой элементов, вместо Dashboard – маленький квадрат (ссылка на Profile) */}
-          <Header loggedIn={loggedIn} setLoggedIn={setLoggedIn} />
+          <Header loggedIn={loggedIn} userData={userData} setLoggedIn={setLoggedIn} />
           <Routes>
+            {/* Общие маршруты для всех авторизованных пользователей */}
+            <Route path="/dashboard" element={<Dashboard loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
             <Route path="/profile" element={<Dashboard loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
             <Route path="/news/northern" element={<NorthernNews />} />
             <Route path="/news/gaming" element={<GamingNews />} />
@@ -68,12 +90,24 @@ const App = () => {
             <Route path="/rules" element={<Rules />} />
             <Route path="/guild" element={<Guild />} />
             <Route path="/bank" element={<Bank />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/" element={<Dashboard />} />
+
+            {/* Технический маршрут EditSupport – доступен только для технических ролей */}
+            <Route
+              path="/edit-support"
+          element={
+    userData && hasTechnicalAccess(userData)
+      ? <EditSupport currentUser={userData} />
+      : <Navigate to="/dashboard" />
+  }
+/>
+
+            {/* Если ни один из маршрутов не совпадает, перенаправляем на Dashboard */}
+            <Route path="/" element={<Dashboard loggedIn={loggedIn} setLoggedIn={setLoggedIn} />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </>
       ) : (
+        // Гостевые маршруты: доступны только логин и регистрация
         <Routes>
           <Route path="/login" element={<Login setLoggedIn={setLoggedIn} />} />
           <Route path="/register" element={<Registration />} />
